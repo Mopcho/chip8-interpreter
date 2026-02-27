@@ -7,6 +7,8 @@
 #include <thread>
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <SDL3/SDL_audio.h>
+#include <numbers>
 
 #define DISPLAY_SCALE 10
 #define DISPLAY_WIDTH (64 * DISPLAY_SCALE)
@@ -76,8 +78,8 @@ int keymap[16] = {
     SDL_SCANCODE_V     // F
 };
 
-SDL_Window* windows = nullptr;
-SDL_Renderer* renderer = nullptr;;
+static SDL_Window* windows = nullptr;
+static SDL_Renderer* renderer = nullptr;;
 static SDL_AudioStream *stream = nullptr;
 const bool* keyboard;
 static std::mt19937 rng(std::random_device{}());
@@ -461,6 +463,10 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
         SDL_Log("Cpouldnt initialize SDL");
         return SDL_APP_FAILURE;
     }
+    if (!SDL_Init(SDL_INIT_AUDIO)) {
+        std::cerr << "SDL_Init error: " << SDL_GetError() << "\n";
+        return SDL_APP_FAILURE;
+    }
     if (!SDL_CreateWindowAndRenderer("CHIP-8", DISPLAY_WIDTH, DISPLAY_HEIGHT, 0x0, &windows, &renderer))
     {
         SDL_Log("Cpouldnt initialize window and renderer %s", SDL_GetError());
@@ -471,9 +477,10 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 64, 32);
 
     SDL_AudioSpec spec;
+    spec.freq = 48000;
+    spec.format = SDL_AUDIO_S16;
     spec.channels = 1;
-    spec.format = SDL_AUDIO_F32;
-    spec.freq = 8000;
+
     stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
     if (!stream)
     {
@@ -515,14 +522,12 @@ SDL_AppResult SDL_AppIterate(void* appstate)
         if (chip->delay_timer > 0) chip->delay_timer--;
         if (chip->sound_timer > 0) chip->sound_timer--;
 
-        SDL_PutAudioStreamData(stream, );
-
         last_timer = now;
     }
 
     for (int i = 0; i < 64 * 32; i++)
     {
-        pixels[i] = gfx[i] ? 0xFFFFFFFF : 0xFF000000;
+        pixels[i] = gfx[i] ? 0xFFFFFFFF : 0x00000000;
     }
     if (draw_flag)
     {
