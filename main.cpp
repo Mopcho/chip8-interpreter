@@ -143,8 +143,6 @@ void emulate_cycle()
 {
     uint16_t opcode = (chip->memory[chip->pc] << 8) | chip->memory[chip->pc + 1];
 
-    std::cout << std::hex << opcode << std::endl;
-
     switch (opcode & 0xF000)
     {
     case 0x0000:
@@ -162,11 +160,6 @@ void emulate_cycle()
                     chip->pc = chip->stack[chip->sp];
                     chip->sp--;
                     return;
-                }
-            default:
-                {
-                    std::cout << std::hex << opcode << std::endl;
-                    break;
                 }
             }
         }
@@ -442,11 +435,6 @@ void emulate_cycle()
                     break;
                 }
             }
-            break;
-        }
-    default:
-        {
-            std::cout << std::hex << opcode << std::endl;
             break;
         }
     }
