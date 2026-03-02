@@ -9,6 +9,7 @@
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_audio.h>
 #include <numbers>
+#include <Windows.Data.Xml.Dom.h>
 
 #define DISPLAY_SCALE 10
 #define DISPLAY_WIDTH (64 * DISPLAY_SCALE)
@@ -81,6 +82,7 @@ int keymap[16] = {
 static SDL_Window* windows = nullptr;
 static SDL_Renderer* renderer = nullptr;;
 static SDL_AudioStream *stream = nullptr;
+static int current_sine_sample = 0;
 const bool* keyboard;
 static std::mt19937 rng(std::random_device{}());
 
@@ -477,8 +479,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, 64, 32);
 
     SDL_AudioSpec spec;
-    spec.freq = 48000;
-    spec.format = SDL_AUDIO_S16;
+    spec.freq = 8000;
+    spec.format = SDL_AUDIO_F32;
     spec.channels = 1;
 
     stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
@@ -521,6 +523,27 @@ SDL_AppResult SDL_AppIterate(void* appstate)
     {
         if (chip->delay_timer > 0) chip->delay_timer--;
         if (chip->sound_timer > 0) chip->sound_timer--;
+
+        if (chip->sound_timer > 0)
+        {
+            const int minimum_audio = (8000 * sizeof(float)) / 2;
+            if (SDL_GetAudioStreamQueued(stream) < minimum_audio)
+            {
+                static float samples[200];
+
+                for (int i = 0; i < SDL_arraysize(samples); i++)
+                {
+                    const int freq = 600;
+                    const float phase = current_sine_sample * freq / 8000.0f;
+                    samples[i] = SDL_sinf(phase * 2 * SDL_PI_F);
+                    current_sine_sample++;
+                }
+
+                current_sine_sample %= 8000;
+
+                SDL_PutAudioStreamData(stream, samples, sizeof(samples));
+            }
+        }
 
         last_timer = now;
     }
